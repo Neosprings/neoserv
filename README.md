@@ -1,17 +1,25 @@
+<div align="center">
 
 # NEOSERV
+
 ### HTB / THM / OffSec / HS Drop Server
 
-A self-hosted HTTP file server pre-loaded with the standard pentest toolkit (~90 tools, ~190 MB) for fast delivery onto Linux and Windows targets during authorized HTB / TryHackMe / OffSec / HackSmarter labs and other sanctioned engagements.
+<img src="neoserv.png" alt="neoserv banner" width="640">
 
-![neoserv banner: HTB/THM/OffSec/HackSmarter drop server](neoserv.png)
+*Self-hosted HTTP drop server that delivers ~90 pentest tools to authorized lab targets in one `curl`.*
+
+</div>
+
+---
+
+A self-hosted HTTP file server pre-loaded with the standard pentest toolkit (~90 tools, ~190 MB) for fast delivery onto Linux and Windows targets during authorized HTB / TryHackMe / OffSec / HackSmarter labs and other sanctioned engagements.
 
 Two scripts do all the work:
 
 | Script   | Purpose                                                                     |
 |----------|-----------------------------------------------------------------------------|
 | `fetch.sh` | Downloads every tool from its official upstream into the right folder      |
-| `neoserv.sh` *(alias: `neoserv`)* | Starts an HTTP server on `tun0:80` (auto-`sudo`) so victims can pull files |
+| `neoserv.sh` *(alias: `neoserv`)* | Starts an HTTP server on `tun0:80` so victims can pull files |
 
 ---
 
@@ -108,7 +116,7 @@ export PATH="$HOME/.local/bin:$PATH"
 # 1. Connect to your lab VPN first
 sudo openvpn ~/Downloads/lab_user.ovpn
 
-# 2. Start the drop server (default port 80, auto-elevates with sudo)
+# 2. Start the drop server (default port 80)
 neoserv
 # or:  ./neoserv.sh
 # or with a custom port: neoserv 1337
@@ -134,26 +142,6 @@ You'll see something like:
 The IP shown is your `tun0` address. Paste those one-liners directly into the victim shell.
 
 `Ctrl-C` to stop. The server only binds to `tun0`, so it's not reachable from the internet or your LAN.
-
-### Skipping the sudo prompt for port 80
-
-Linux requires root to bind any port below 1024, so `neoserv` (default port 80) auto-elevates with `sudo` and prompts for your password the first time per session. Three ways to avoid the prompt:
-
-| Option | Command | Effect |
-|---|---|---|
-| **Use a non-privileged port** | `neoserv 1337` | No sudo at all. URLs become `http://$IP:1337/…` |
-| **Passwordless sudo for this script only** *(recommended if you want port 80)* | see below | `neoserv` still runs port 80, no prompt |
-| **`setcap` on the PHP binary** | `sudo setcap CAP_NET_BIND_SERVICE+ep $(which php)` | Any PHP server can bind privileged ports forever |
-
-To set up the passwordless sudoers entry (one time):
-
-```bash
-echo "$(whoami) ALL=(root) NOPASSWD: $(readlink -f ~/.local/bin/neoserv)" \
-  | sudo tee /etc/sudoers.d/neoserv
-sudo chmod 440 /etc/sudoers.d/neoserv
-```
-
-After that, `neoserv` runs port 80 with no password prompt.
 
 ---
 
