@@ -4,7 +4,7 @@
 
 ### HTB / THM / OffSec / HS Drop Server
 
-<img src="neoserv.png" alt="neoserv banner" width="640">
+<img src="neoserv.png" alt="neoserv banner" width="1080">
 
 *Self-hosted HTTP drop server that delivers ~90 pentest tools to authorized lab targets in one `curl`.*
 
