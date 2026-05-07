@@ -84,7 +84,6 @@ This populates the folder structure and prints a summary of fetched / failed dow
 So you can launch the server from anywhere with one word:
 
 ```bash
-mkdir -p ~/.local/bin
 ln -sf "$PWD/neoserv.sh" ~/.local/bin/neoserv
 ```
 
