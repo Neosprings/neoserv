@@ -1,7 +1,5 @@
 # HTB / THM / OffSec / HS Drop Server
 
-By **Chris Alupului (Neospring)**
-
 ![neoserv banner: HTB/THM/OffSec/HackSmarter drop server](neoserv.png)
 
 A self-hosted HTTP file server pre-loaded with the standard pentest toolkit (~90 tools, ~190 MB) for fast delivery onto Linux and Windows targets during authorized HTB / TryHackMe / OffSec / HackSmarter labs and other sanctioned engagements.
@@ -69,6 +67,7 @@ Drop it wherever you keep your tooling:
 ```bash
 git clone https://github.com/Neosprings/neoserv.git
 cd neoserv
+chmod +x fetch.sh neoserv.sh
 ```
 
 ### 2. Pull all tools
