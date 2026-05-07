@@ -1,0 +1,15 @@
+# Don't commit fetched binaries — let fetch.sh pull fresh.
+ad/
+linux/
+windows/
+shells/
+tunneling/
+potatoes/
+sysinternals/
+kernel-exploits/
+static-bins/
+
+# OS junk
+.DS_Store
+Thumbs.db
+*.swp
