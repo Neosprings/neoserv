@@ -67,7 +67,7 @@ Disk: ~200 MB after `fetch.sh` runs. Bandwidth: ~190 MB initial download from Gi
 Drop it wherever you keep your tooling:
 
 ```bash
-git clone https://github.com/<you>/neoserv.git
+git clone https://github.com/neosprings/neoserv.git
 cd neoserv
 ```
 
