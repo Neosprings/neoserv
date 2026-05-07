@@ -4,15 +4,13 @@
 
 ### HTB / THM / OffSec / HS Drop Server
 
-<img src="neoserv.png" alt="neoserv banner" width="1080">
+A self-hosted HTTP file server pre-loaded with the standard pentest toolkit (~90 tools, ~190 MB) for fast delivery onto Linux and Windows targets during authorized HTB / TryHackMe / OffSec / HackSmarter labs and other sanctioned engagements.
 
-*Self-hosted HTTP drop server that delivers ~90 pentest tools to authorized lab targets in one `curl`.*
+<img src="neoserv.png" alt="neoserv banner" width="1080">
 
 </div>
 
 ---
-
-A self-hosted HTTP file server pre-loaded with the standard pentest toolkit (~90 tools, ~190 MB) for fast delivery onto Linux and Windows targets during authorized HTB / TryHackMe / OffSec / HackSmarter labs and other sanctioned engagements.
 
 Two scripts do all the work:
 
