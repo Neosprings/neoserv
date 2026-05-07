@@ -7,13 +7,10 @@
 ROOT="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)"
 PORT="${1:-80}"
 
-# Privileged ports (<1024) need root. Re-exec with sudo if necessary.
-# Use the resolved absolute path so sudo's restricted secure_path doesn't break us
-# when invoked via the ~/.local/bin/neoserv symlink.
-if [ "$PORT" -lt 1024 ] && [ "$EUID" -ne 0 ]; then
-  echo "[*] Port $PORT requires root. Re-running with sudo..."
-  exec sudo -E "$(readlink -f "$0")" "$PORT"
-fi
+# Note: Kali ships with net.ipv4.ip_unprivileged_port_start=0, so binding to
+# port 80 as a normal user works without sudo. On stricter distros where
+# privileged ports are still restricted, php/python will print a clear
+# "Permission denied" and you can re-run as: sudo neoserv
 
 ip=$(ip -4 -o addr show tun0 2>/dev/null | awk '{print $4}' | cut -d/ -f1)
 if [ -z "$ip" ]; then
